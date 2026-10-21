@@ -1,0 +1,126 @@
+{
+  "session_name": "run_20261021_115020",
+  "created_at": "2026-10-21 11:50:20",
+  "git_hash": "436d2e2472d7e63c97cff324b6206366dff0d866",
+  "platform": "Windows-10-10.0.22631-SP0",
+  "python_version": "3.11.9",
+  "processor": "Intel64 Family 6 Model 186 Stepping 3, GenuineIntel",
+  "config": {
+    "seed": 42,
+    "device": "cpu",
+    "capture": {
+      "camera_id": 0,
+      "width": 960,
+      "height": 540,
+      "target_fps": 30
+    },
+    "detector": {
+      "backend": "yolo",
+      "model_path": "models/yolov8n.pt",
+      "tracker_config": "bytetrack.yaml",
+      "person_class_id": 0,
+      "conf_threshold": 0.4,
+      "iou_threshold": 0.5,
+      "detect_interval": 2,
+      "track_lost_frames": 30
+    },
+    "face": {
+      "yunet_model_path": "models/face_detection_yunet_2023mar.onnx",
+      "sface_model_path": "models/face_recognition_sface_2021dec.onnx",
+      "score_threshold": 0.6,
+      "nms_threshold": 0.3,
+      "top_k": 5000,
+      "min_face_size": 20,
+      "match_threshold": 0.363,
+      "enrolled_dir": "data/enrolled",
+      "enroll_samples": 20
+    },
+    "mapper": {
+      "upper_body_ratio": 0.4,
+      "min_face_width_ratio": 0.12,
+      "max_face_width_ratio": 0.65,
+      "min_assignment_score": 0.4,
+      "overlap_iou_threshold": 0.25,
+      "ambiguous_penalty": 0.05,
+      "weights": {
+        "containment": 0.35,
+        "horizontal": 0.35,
+        "size": 0.2,
+        "vertical": 0.1
+      }
+    },
+    "identity": {
+      "half_life_s": 2.0,
+      "confidence_floor": 0.3,
+      "hysteresis_k": 2,
+      "ambiguous_decay_multiplier": 1.5
+    },
+    "centring": {
+      "target_name": "",
+      "kp": 1.5,
+      "deadband": 0.03,
+      "pan_max": 30.0,
+      "max_angle": 45.0,
+      "smoothing_alpha": 0.35
+    },
+    "overlay": {
+      "show_debug": false,
+      "show_fps": true,
+      "show_virtual_pan": true,
+      "box_thickness": 2,
+      "font_scale": 0.55,
+      "colors": {
+        "confirmed": [
+          0,
+          220,
+          0
+        ],
+        "temporary": [
+          0,
+          165,
+          255
+        ],
+        "unknown": [
+          140,
+          140,
+          140
+        ],
+        "target_crosshair": [
+          0,
+          255,
+          255
+        ],
+        "ambiguous_badge": [
+          0,
+          0,
+          255
+        ]
+      }
+    },
+    "logging": {
+      "log_dir": "logs",
+      "video_dir": "videos",
+      "report_dir": "reports"
+    }
+  },
+  "columns": [
+    "frame",
+    "timestamp",
+    "track_id",
+    "bbox_x",
+    "bbox_y",
+    "bbox_w",
+    "bbox_h",
+    "state",
+    "name",
+    "confidence",
+    "similarity",
+    "face_visible",
+    "ambiguous",
+    "centring_error",
+    "pan_cmd",
+    "pan_angle",
+    "fps",
+    "event_marker"
+  ]
+}

@@ -1,0 +1,2 @@
+frame,timestamp,track_id,bbox_x,bbox_y,bbox_w,bbox_h,state,name,confidence,similarity,face_visible,ambiguous,centring_error,pan_cmd,pan_angle,fps,event_marker
+0,0.0000,,,,,,Unknown,None,0.000,0.000,0,0,0.0000,0.000,0.000,27.02,

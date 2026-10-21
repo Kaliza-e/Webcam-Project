@@ -84,6 +84,10 @@ class TrackingPipeline:
             track_lost_frames=det_cfg.get("track_lost_frames", 30),
             ambiguous_decay_multiplier=id_cfg.get("ambiguous_decay_multiplier", 1.5),
             ambiguous_penalty=map_cfg.get("ambiguous_penalty", 0.05),
+            body_continuity_enabled=id_cfg.get("body_continuity_enabled", True),
+            body_retention_weight=id_cfg.get("body_retention_weight", 0.75),
+            body_match_threshold=id_cfg.get("body_match_threshold", 0.45),
+            min_body_confidence=id_cfg.get("min_body_confidence", 0.60),
         )
 
         # 6. Centring controller
@@ -154,6 +158,7 @@ class TrackingPipeline:
         timestamp: float,
         frame_idx: int,
         event_marker: Optional[str] = None,
+        is_mirrored: bool = False,
     ) -> Tuple[np.ndarray, dict]:
         """
         Execute one full processing iteration on a single frame.
@@ -201,17 +206,19 @@ class TrackingPipeline:
         # Stage 5: State machine update
         t0 = time.perf_counter()
         active_tids = [t.id for t in body_tracks]
+        body_box_map = {t.id: t.bbox_xywh for t in body_tracks}
         active_identities = self.identity_mgr.step(
             current_time=timestamp,
             active_track_ids=active_tids,
             face_assignments=face_evidence,
             match_threshold=self.match_threshold,
             ambiguous_track_ids=ambiguous_track_ids,
+            frame=frame,
+            body_bboxes=body_box_map,
         )
 
         # Map tracks for centring controller: track_id -> (TrackIdentity, bbox)
         tracks_for_centring = {}
-        body_box_map = {t.id: t.bbox_xywh for t in body_tracks}
         for tid, ident in active_identities.items():
             tracks_for_centring[tid] = (ident, body_box_map.get(tid, (0, 0, 0, 0)))
 
@@ -266,6 +273,7 @@ class TrackingPipeline:
             "floor": self.identity_mgr.confidence_floor,
             "scenario": self.scenario_tag,
             "is_recording": self.is_recording,
+            "is_mirrored": is_mirrored,
             "target_name": self.centring.target_name,
             "latencies": self.stage_latencies,
         }

@@ -163,11 +163,24 @@ python -m src.enroll --name me --samples 20
 ### 2. Live Tracking & Virtual Centring
 Run the live system with overlay and diagnostic HUD:
 ```bash
+# Standard launch (default built-in webcam):
 python -m src.main
+
+# Use External USB Camera (Camera index 1):
+python -m src.main --camera 1
+
+# Launch external camera in 720p or 1080p widescreen:
+python -m src.main --camera 1 --width 1280 --height 720 --fullscreen
+
+# Probe all connected cameras on your machine:
+python scripts/list_cameras.py
 ```
 
 #### Keyboard Controls:
 - **`q`**: Quit the application.
+- **`c`**: Switch camera source on the fly (cycles between Webcam `0` and External `1`).
+- **`f`**: Toggle Fullscreen mode on / off.
+- **`a`**: Toggle display mode between **FILL** (stretch to fill whole screen) and **FIT** (maintain aspect ratio centered).
 - **`r`**: Start / stop recording raw video to `videos/` and synchronized per-frame CSV logs to `logs/`.
 - **`1` .. `6`**: Insert scenario event markers into the live log:
   - `1`: `head_turn_start`

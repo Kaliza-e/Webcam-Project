@@ -73,7 +73,10 @@ class VisualOverlay:
             if state == State.CONFIRMED:
                 label = f"ID:{tid} | {identity.name} | CONFIRMED | {identity.confidence:.2f}"
             elif state == State.TEMPORARY:
-                label = f"ID:{tid} | {identity.name} | TEMPORARY ({identity.confidence:.2f})"
+                if getattr(identity, "is_body_locked", False):
+                    label = f"ID:{tid} | {identity.name} | TEMPORARY [BODY LOCK] ({identity.confidence:.2f})"
+                else:
+                    label = f"ID:{tid} | {identity.name} | TEMPORARY ({identity.confidence:.2f})"
             else:
                 label = f"ID:{tid} | Unknown | UNKNOWN | 0.00"
 
@@ -196,11 +199,12 @@ class VisualOverlay:
             cv2.circle(canvas, (w - 75, 20), 6, (0, 0, 255), -1)
             cv2.putText(canvas, "REC", (w - 62, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 0, 255), 2, cv2.LINE_AA)
         else:
-            cv2.putText(canvas, "[PAUSED]", (w - 85, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (120, 120, 120), 1, cv2.LINE_AA)
+            rec_tag = "[MIRROR]" if hud_data.get("is_mirrored", False) else "[PAUSED]"
+            cv2.putText(canvas, rec_tag, (w - 85, 24), cv2.FONT_HERSHEY_SIMPLEX, 0.42, (0, 255, 255) if hud_data.get("is_mirrored", False) else (120, 120, 120), 1, cv2.LINE_AA)
 
         # Row 2 (Quick Key Guide)
-        key_help = "Keys: 'q' quit | 'r' rec | 1-6 markers | 't' target | '[' / ']' T_half | 'd' debug"
-        cv2.putText(canvas, key_help, (12, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.40, (170, 170, 170), 1, cv2.LINE_AA)
+        key_help = "Keys: 'q' quit | 'm' mirror | 'c' cam | 'f' full | 'a' fill/fit | 'r' rec | 't' target | '[' / ']' T_half"
+        cv2.putText(canvas, key_help, (12, 42), cv2.FONT_HERSHEY_SIMPLEX, 0.38, (170, 170, 170), 1, cv2.LINE_AA)
 
         # Row 3 & 4 (Per-stage Latency Debug Breakdown)
         if self.show_debug:

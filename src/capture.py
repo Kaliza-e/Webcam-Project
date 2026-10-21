@@ -20,11 +20,15 @@ class VideoCaptureWrapper:
         width: int = 640,
         height: int = 480,
         target_fps: float = 30.0,
+        mirror_h: bool = False,
+        flip_v: bool = False,
     ):
         self.source = source
         self.requested_width = width
         self.requested_height = height
         self.target_fps = target_fps
+        self.mirror_h = mirror_h
+        self.flip_v = flip_v
         self.is_video_file = isinstance(source, str) and not source.isdigit()
 
         self.cap: Optional[cv2.VideoCapture] = None
@@ -36,6 +40,16 @@ class VideoCaptureWrapper:
         self.total_frames = -1
 
         self._open()
+
+    def toggle_mirror(self) -> bool:
+        """Toggle horizontal mirroring on / off."""
+        self.mirror_h = not self.mirror_h
+        return self.mirror_h
+
+    def toggle_flip_v(self) -> bool:
+        """Toggle vertical flip on / off."""
+        self.flip_v = not self.flip_v
+        return self.flip_v
 
     def _open(self):
         # On Windows, try cv2.CAP_DSHOW for webcam to avoid slow initialization
@@ -71,7 +85,7 @@ class VideoCaptureWrapper:
 
     def read(self) -> Tuple[bool, Optional[any], float]:
         """
-        Read the next frame.
+        Read the next frame with optional horizontal mirroring and vertical flip.
         Returns:
             (ret, frame, timestamp_sec)
         """
@@ -79,8 +93,16 @@ class VideoCaptureWrapper:
             return False, None, 0.0
 
         ret, frame = self.cap.read()
-        if not ret:
+        if not ret or frame is None:
             return False, None, 0.0
+
+        # Apply mirroring / flipping
+        if self.mirror_h and self.flip_v:
+            frame = cv2.flip(frame, -1)
+        elif self.mirror_h:
+            frame = cv2.flip(frame, 1)
+        elif self.flip_v:
+            frame = cv2.flip(frame, 0)
 
         # In video replay mode, timestamp is derived deterministically from frame index and fps
         if self.is_video_file:
@@ -98,6 +120,27 @@ class VideoCaptureWrapper:
             self.frame_index = 0
             self.start_time = time.time()
 
+    def switch_source(self, new_source: int | str) -> bool:
+        """
+        Switch video source dynamically on the fly to another camera index or URL.
+        """
+        old_cap = self.cap
+        old_source = self.source
+        self.source = new_source
+        self.is_video_file = isinstance(new_source, str) and not new_source.isdigit()
+
+        try:
+            if old_cap is not None:
+                old_cap.release()
+            self._open()
+            print(f"[VideoCapture] Successfully switched to source: {new_source} ({self.actual_width}x{self.actual_height} @ {self.fps:.1f} FPS)")
+            return True
+        except Exception as e:
+            print(f"[VideoCapture] Failed to switch to source {new_source}: {e}")
+            self.source = old_source
+            self._open()
+            return False
+
     def release(self):
         if self.cap is not None:
             self.cap.release()
@@ -108,3 +151,27 @@ class VideoCaptureWrapper:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.release()
+
+
+def list_available_cameras(max_tested: int = 5) -> list:
+    """
+    Detect and probe all connected cameras on the system.
+    Returns list of dicts with index, resolution, and functional status.
+    """
+    available = []
+    for idx in range(max_tested):
+        cap = cv2.VideoCapture(idx, cv2.CAP_DSHOW)
+        if cap.isOpened():
+            ret, _ = cap.read()
+            w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+            cap.release()
+            available.append({
+                "index": idx,
+                "default_width": w,
+                "default_height": h,
+                "fps": fps,
+                "working": ret,
+            })
+    return available

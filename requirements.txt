@@ -9,3 +9,4 @@ matplotlib==3.11.2
 PyYAML==6.0.3
 pytest==9.1.1
 ultralytics>=8.0.0
+#lap>=0.5.12

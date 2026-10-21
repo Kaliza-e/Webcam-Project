@@ -133,11 +133,14 @@ def test_honesty_rule_2_contradicting_face_drops_to_unknown():
     assert mgr.tracks[1].state == State.UNKNOWN
     assert mgr.tracks[1].name == "Unknown"
 
-    # Also test unrecognized face (< threshold) drops Confirmed/Temporary to Unknown
+    # Test unrecognized face (< threshold, e.g. covered/occluded face) transitions Confirmed to Temporary
     mgr.tracks[1].state = State.CONFIRMED
     mgr.tracks[1].name = "Alice"
-    mgr.step(current_time=2.0, active_track_ids=[1], face_assignments={1: (None, 0.15)}, match_threshold=0.363)
-    assert mgr.tracks[1].state == State.UNKNOWN
+    mgr.tracks[1].conf_at_seen = 0.90
+    mgr.tracks[1].t_last_seen = 2.0
+    mgr.step(current_time=2.1, active_track_ids=[1], face_assignments={1: (None, 0.15)}, match_threshold=0.363)
+    assert mgr.tracks[1].state == State.TEMPORARY
+    assert mgr.tracks[1].name == "Alice"
 
 
 def test_honesty_rule_3_track_lost_timeout():
@@ -224,3 +227,54 @@ def test_honesty_rule_6_hysteresis():
     mgr.step(current_time=1.066, active_track_ids=[1], face_assignments={1: ("Alice", 0.90)}, match_threshold=0.363)
     assert mgr.tracks[1].state == State.CONFIRMED
     assert mgr.tracks[1].name == "Alice"
+
+
+def test_body_tracking_continuity():
+    """
+    Verify security-grade whole-person body tracking continuity:
+    When face is occluded/lost, unbroken body tracking and torso appearance match
+    sustains identity in Temporary state with [BODY LOCK], maintaining high confidence.
+    """
+    import numpy as np
+    mgr = IdentityManager(
+        half_life_s=2.0,
+        confidence_floor=0.30,
+        hysteresis_k=1,
+        body_continuity_enabled=True,
+        body_retention_weight=0.75,
+        min_body_confidence=0.60,
+    )
+    # Synthetic frame with a distinct torso patch
+    frame = np.full((480, 640, 3), 100, dtype=np.uint8)
+    frame[50:350, 150:400] = [30, 80, 200]
+    bbox = (150, 50, 250, 300)
+
+    # 1. Confirm Alice with face and body frame
+    mgr.step(
+        current_time=1.0,
+        active_track_ids=[1],
+        face_assignments={1: ("Alice", 0.90)},
+        match_threshold=0.363,
+        frame=frame,
+        body_bboxes={1: bbox},
+    )
+    assert mgr.tracks[1].state == State.CONFIRMED
+    assert mgr.tracks[1].name == "Alice"
+    assert mgr.tracks[1].body_signature is not None
+    assert mgr.tracks[1].is_body_locked
+
+    # 2. Face covered / occluded for 3.0 seconds (dt=3s > T_half)
+    mgr.step(
+        current_time=4.0,
+        active_track_ids=[1],
+        face_assignments={},  # face covered
+        match_threshold=0.363,
+        frame=frame,
+        body_bboxes={1: bbox},
+    )
+    # Body lock should remain active
+    assert mgr.tracks[1].state == State.TEMPORARY
+    assert mgr.tracks[1].name == "Alice"
+    assert mgr.tracks[1].is_body_locked
+    # Sustained confidence floor (0.90 * 0.60 * 1.0 = 0.54 >= 0.50)
+    assert mgr.tracks[1].confidence >= 0.50

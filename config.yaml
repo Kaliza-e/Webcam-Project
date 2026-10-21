@@ -8,10 +8,12 @@ device: "cpu" # Enforce CPU-only execution
 
 # Camera & Capture
 capture:
-  camera_id: 0
+  camera_id: 0 # 0 = Built-in webcam, 1 = External USB camera, or RTSP/HTTP URL string
   width: 640
   height: 480
   target_fps: 30
+  mirror: false # Set true to mirror horizontally (selfie / webcam mode)
+  flip_v: false # Set true to flip vertically (ceiling mount mode)
 
 # Person Detection & Tracking
 detector:
@@ -19,7 +21,7 @@ detector:
   model_path: "models/yolov8n.pt"
   tracker_config: "bytetrack.yaml"
   person_class_id: 0
-  conf_threshold: 0.40
+  conf_threshold: 0.35
   iou_threshold: 0.50
   detect_interval: 2 # Run heavy detection every N frames; tracker updates in between
   track_lost_frames: 30 # Disappear timeout (frames) before deleting track identity
@@ -50,12 +52,16 @@ mapper:
     size: 0.20
     vertical: 0.10
 
-# Three-State Identity Machine
+# Three-State Identity Machine with Body Continuity
 identity:
   half_life_s: 2.0 # T_half in seconds: conf(t) = conf_seen * exp(-ln(2)*(t - t_seen)/T_half)
   confidence_floor: 0.30 # Temporary -> Unknown when confidence drops below this floor
   hysteresis_k: 2 # Consecutive matching frames needed to promote Unknown -> Confirmed
-  ambiguous_decay_multiplier: 1.5 # Optional extra decay rate while ambiguous overlap without face
+  ambiguous_decay_multiplier: 1.5 # Extra decay rate while ambiguous overlap without face
+  body_continuity_enabled: true # Security-grade whole-person body tracking continuity
+  body_retention_weight: 0.75 # Decay reduction weight while body appearance matches
+  body_match_threshold: 0.45 # Minimum torso appearance similarity for body lock
+  min_body_confidence: 0.60 # Minimum sustained confidence floor during body lock
 
 # Simulated Virtual-Pan Centring Controller
 centring:
